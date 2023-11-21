@@ -1,14 +1,9 @@
-from drf_spectacular.utils import (
-    OpenApiResponse,
-    extend_schema,
-    extend_schema_view,
-)
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
-from api.permissions import IsAdminOwnerOrReadOnly
 from api.serializers import PostSerializer
 from posts.models import Post
 
@@ -73,7 +68,7 @@ def api_posts(request):
             response=None, description="Не заполнено обязательное поле"
         ),
         status.HTTP_403_FORBIDDEN: OpenApiResponse(
-            response=None, description="Пользователь на авторизован"
+            response=None, description="Попытка изменить чужой контент"
         ),
         status.HTTP_404_NOT_FOUND: OpenApiResponse(
             response=None,
@@ -89,7 +84,7 @@ def api_posts(request):
             response=None, description="Удачное выполнение запроса"
         ),
         status.HTTP_403_FORBIDDEN: OpenApiResponse(
-            response=None, description="Пользователь на авторизован"
+            response=None, description="Попытка изменить чужой контент"
         ),
         status.HTTP_404_NOT_FOUND: OpenApiResponse(
             response=None,
@@ -99,7 +94,6 @@ def api_posts(request):
     methods=["DELETE"],
 )
 @api_view(["GET", "PUT", "PATCH", "DELETE"])
-@permission_classes([IsAdminOwnerOrReadOnly])
 def api_posts_detail(request, pk):
     """
     API-вью для работы с конкретными постами по их ID.
@@ -120,13 +114,22 @@ def api_posts_detail(request, pk):
         serializer = PostSerializer(post)
         return Response(serializer.data)
 
-    elif request.method in ["PUT", "PATCH"]:
-        serializer = PostSerializer(post, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif post.author == request.user or request.user.is_superuser:
+        if request.method in ["PUT", "PATCH"]:
+            serializer = PostSerializer(post, data=request.data, partial=True)
 
-    elif request.method == "DELETE":
-        post.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        elif request.method == "DELETE":
+            post.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+    else:
+        return Response(
+            {"error": "Попытка изменить чужой контент"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
