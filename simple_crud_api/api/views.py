@@ -1,4 +1,8 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -21,7 +25,12 @@ from posts.models import Post
     methods=["POST"],
     responses={
         status.HTTP_201_CREATED: PostSerializer,
-        status.HTTP_400_BAD_REQUEST: "",
+        status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+            response=None, description="Не заполнено обязательное поле"
+        ),
+        status.HTTP_403_FORBIDDEN: OpenApiResponse(
+            response=None, description="Пользователь на авторизован"
+        ),
     },
 )
 @api_view(["GET", "POST"])
@@ -47,8 +56,47 @@ def api_posts(request):
 
 @extend_schema(
     request=PostSerializer,
-    responses={status.HTTP_200_OK: PostSerializer},
-    methods=["GET", "PUT", "PATCH", "DELETE"],
+    responses={
+        status.HTTP_200_OK: PostSerializer,
+        status.HTTP_404_NOT_FOUND: OpenApiResponse(
+            response=None,
+            description="Попытка запроса несуществующей публикации",
+        ),
+    },
+    methods=["GET"],
+)
+@extend_schema(
+    request=PostSerializer,
+    responses={
+        status.HTTP_200_OK: PostSerializer,
+        status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+            response=None, description="Не заполнено обязательное поле"
+        ),
+        status.HTTP_403_FORBIDDEN: OpenApiResponse(
+            response=None, description="Пользователь на авторизован"
+        ),
+        status.HTTP_404_NOT_FOUND: OpenApiResponse(
+            response=None,
+            description="Попытка запроса несуществующей публикации",
+        ),
+    },
+    methods=["PUT", "PATCH"],
+)
+@extend_schema(
+    request=PostSerializer,
+    responses={
+        status.HTTP_204_NO_CONTENT: OpenApiResponse(
+            response=None, description="Удачное выполнение запроса"
+        ),
+        status.HTTP_403_FORBIDDEN: OpenApiResponse(
+            response=None, description="Пользователь на авторизован"
+        ),
+        status.HTTP_404_NOT_FOUND: OpenApiResponse(
+            response=None,
+            description="Попытка запроса несуществующей публикации",
+        ),
+    },
+    methods=["DELETE"],
 )
 @api_view(["GET", "PUT", "PATCH", "DELETE"])
 @permission_classes([IsAdminOwnerOrReadOnly])
