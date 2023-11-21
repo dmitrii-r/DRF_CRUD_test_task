@@ -6,6 +6,8 @@ User = get_user_model()
 
 
 class Post(models.Model):
+    """Модель для представления постов."""
+
     name = models.CharField("Название", max_length=settings.TITLE_MAX_LENGTH)
     text = models.TextField("Текст")
     created = models.DateTimeField("Дата создания", auto_now_add=True)
