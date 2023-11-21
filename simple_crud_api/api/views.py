@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -8,6 +9,21 @@ from api.serializers import PostSerializer
 from posts.models import Post
 
 
+@extend_schema(
+    request=PostSerializer,
+    methods=["GET"],
+    responses={
+        status.HTTP_200_OK: PostSerializer(many=True),
+    },
+)
+@extend_schema(
+    request=PostSerializer,
+    methods=["POST"],
+    responses={
+        status.HTTP_201_CREATED: PostSerializer,
+        status.HTTP_400_BAD_REQUEST: "",
+    },
+)
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def api_posts(request):
@@ -29,6 +45,11 @@ def api_posts(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=PostSerializer,
+    responses={status.HTTP_200_OK: PostSerializer},
+    methods=["GET", "PUT", "PATCH", "DELETE"],
+)
 @api_view(["GET", "PUT", "PATCH", "DELETE"])
 @permission_classes([IsAdminOwnerOrReadOnly])
 def api_posts_detail(request, pk):
