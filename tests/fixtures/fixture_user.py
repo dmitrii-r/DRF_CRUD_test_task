@@ -24,10 +24,27 @@ def another_user(django_user_model, password):
 
 
 @pytest.fixture
+def super_user(django_user_model, password):
+    return django_user_model.objects.create_superuser(
+        username='SuperUser', password=password
+    )
+
+
+@pytest.fixture
 def user_client(user, password):
     client = APIClient()
     credentials = base64.b64encode(
         f"{user.username}:{password}".encode('utf-8')
+    ).decode('utf-8')
+    client.credentials(HTTP_AUTHORIZATION=f"Basic {credentials}")
+    return client
+
+
+@pytest.fixture
+def superuser_client(super_user, password):
+    client = APIClient()
+    credentials = base64.b64encode(
+        f"{super_user.username}:{password}".encode('utf-8')
     ).decode('utf-8')
     client.credentials(HTTP_AUTHORIZATION=f"Basic {credentials}")
     return client

@@ -279,3 +279,55 @@ class TestPosts:
             'Проверьте, что DELETE-запрос неавторизованного пользователя '
             f'к `{self.post_detail_url}` не удаляет запрошенный пост.'
         )
+
+    @pytest.mark.parametrize('http_method', ('put', 'patch'))
+    def test_post_change_by_superuser(self, superuser_client, post,
+                                      http_method):
+        request_func = getattr(superuser_client, http_method)
+        response = request_func(
+            self.post_detail_url.format(post_id=post.id),
+            data=self.VALID_DATA
+        )
+        http_method = http_method.upper()
+        assert response.status_code == HTTPStatus.OK, (
+            f'Проверьте, что {http_method}-запрос авторизованного суперюзера, '
+            f'отправленный на `{self.post_detail_url}` к чужому посту, '
+            f'вернёт ответ со статусом 200.'
+        )
+
+        test_post = Post.objects.filter(id=post.id).first()
+        assert test_post, (
+            f'Проверьте, что {http_method}-запрос авторизованного суперюзера, '
+            f'отправленный на `{self.post_detail_url}` к чужому посту, '
+            f'не удаляет редактируемый пост.'
+        )
+        assert test_post.name == self.VALID_DATA['name'], (
+            f'Проверьте, что {http_method}-запрос авторизованного суперюзера, '
+            f'отправленный на `{self.post_detail_url}` к чужому посту, '
+            f'вносит изменения в {test_post.name} поста.'
+        )
+        assert test_post.text == self.VALID_DATA['text'], (
+            f'Проверьте, что {http_method}-запрос авторизованного суперюзера, '
+            f'отправленный на `{self.post_detail_url}` к чужому посту, '
+            f'вносит изменения в {test_post.text} поста.'
+        )
+        assert test_post.is_published == self.VALID_DATA['is_published'], (
+            f'Проверьте, что {http_method}-запрос авторизованного суперюзера, '
+            f'отправленный на `{self.post_detail_url}` к чужому посту, '
+            f'вносит изменения в {test_post.is_published} поста.'
+        )
+
+    def test_post_delete_by_superuser(self, superuser_client, post):
+        response = superuser_client.delete(
+            self.post_detail_url.format(post_id=post.id)
+        )
+        assert response.status_code == HTTPStatus.NO_CONTENT, (
+            'Проверьте, что для авторизованного суперюзера DELETE-запрос к '
+            f'`{self.post_detail_url}` возвращает ответ со статусом 204.'
+        )
+
+        test_post = Post.objects.filter(id=post.id).first()
+        assert not test_post, (
+            'Проверьте, что для авторизованного суперюзера DELETE-запрос к '
+            f'`{self.post_detail_url}` удаляет этот пост.'
+        )
